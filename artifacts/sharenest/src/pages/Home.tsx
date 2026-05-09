@@ -1,4 +1,5 @@
 import { useState } from "react";
+import heroBg from "@assets/image_1778366786089.png";
 import { Link } from "wouter";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
@@ -44,7 +45,7 @@ export default function Home() {
         <div className="absolute inset-0 bg-black/40 z-10" />
         <div 
           className="absolute inset-0 bg-cover bg-center" 
-          style={{ backgroundImage: "url('/hero-bg.png')", backgroundColor: "#e2e8f0" }}
+          style={{ backgroundImage: `url(${heroBg})`, backgroundColor: "#e2e8f0" }}
         />
         
         <div className="relative z-20 container mx-auto px-4 text-center">
