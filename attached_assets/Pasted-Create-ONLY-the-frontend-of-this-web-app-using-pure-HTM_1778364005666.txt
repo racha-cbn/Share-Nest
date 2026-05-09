@@ -1,0 +1,82 @@
+Create ONLY the frontend of this web app using pure HTML, CSS, and JavaScript (no backend, no database, no frameworks unless absolutely necessary). The design must be modern, responsive, clean, and visually attractive.
+
+The website is a French-language platform based in Algeria where users can post OFFERS and REQUESTS for sharing, donating, exchanging, or helping with items/services.
+
+IMPORTANT:
+
+* The entire website must be in French
+* All sample locations/cities must be Algerian cities (Oran, Alger, Constantine, Tlemcen, Sétif, Annaba, Béjaïa, etc.)
+* Use French labels, buttons, filters, and text content everywhere in the UI
+
+Requirements:
+
+1. Hero Section:
+
+* When the user enters the website, display a large banner/hero section with:
+
+  * A high-quality background image
+  * A short catchy French headline in the center
+  * A brief explanatory text in French describing the purpose of the platform
+  * A call-to-action button
+
+2. Listings Feed:
+
+* After scrolling down, display all offers and requests in a feed layout similar to Instagram posts/cards.
+* Each post card must contain:
+
+  * User image/avatar
+  * Title
+  * Short description
+  * Category
+  * Type badge (Offre or Demande)
+  * Optional item image
+  * Algerian location/city
+  * Date/time
+  * Buttons
+
+3. Filters:
+   Add filters above the listings:
+
+* Filter by category
+* Filter by type:
+
+  * Offres uniquement
+  * Demandes uniquement
+  * Toutes
+
+4. Buttons Logic:
+
+* If the post type is a DEMANDE:
+
+  * Show a “Proposer” button
+* If the post type is an OFFRE:
+
+  * Show a “Demander” button
+* Every card must also include a “Voir détails” button
+
+5. Interaction:
+
+* When the user clicks “Proposer” or “Demander”, redirect them to a messaging/contact page or open a chat/contact modal to contact the owner of the post.
+
+6. UI/UX:
+
+* Use smooth animations and hover effects
+* Make the design mobile responsive
+* Use modern typography and spacing
+* Add a navbar and footer
+* Use attractive cards and clean layouts
+* Add sample/demo data for multiple offers and requests
+* The visual style should feel modern, community-focused, and trustworthy
+
+7. Technical Constraints:
+
+* Frontend only
+* Use HTML, CSS, and vanilla JavaScript
+* Organize the code cleanly
+* Separate files:
+
+  * index.html
+  * style.css
+  * script.js
+
+Generate a complete polished frontend ready to run locally in the browser.

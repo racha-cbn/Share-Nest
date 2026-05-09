@@ -1,0 +1,8 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "mdv38IVn3SDM6DHtqRlhE"
+uri = "file://artifacts/sharenest/public/hero-bg.png"
+type = "image"
+title = "Warm Algerian neighborhood sharing"
