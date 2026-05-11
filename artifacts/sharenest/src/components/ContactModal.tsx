@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Post } from "@/data/posts";
+import { type Post as ApiPost } from "@/lib/api";
 import {
   Dialog,
   DialogContent,
@@ -14,7 +14,7 @@ import { HeartHandshake } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface ContactModalProps {
-  post: Post | null;
+  post: ApiPost | null;
   isOpen: boolean;
   onClose: () => void;
 }
@@ -27,15 +27,15 @@ export function ContactModal({ post, isOpen, onClose }: ContactModalProps) {
 
   const isOffre = post.type === "offre";
   const actionText = isOffre ? "Demander cet objet/service" : "Proposer votre aide";
-  
+
   const handleSend = () => {
     if (!message.trim()) return;
-    
+
     toast({
       title: "Message envoyé avec succès !",
       description: `Votre message a été transmis à ${post.authorName}.`,
     });
-    
+
     setMessage("");
     onClose();
   };
@@ -52,7 +52,7 @@ export function ContactModal({ post, isOpen, onClose }: ContactModalProps) {
             Concernant l'annonce : <span className="font-semibold text-foreground">{post.title}</span>
           </DialogDescription>
         </DialogHeader>
-        
+
         <div className="grid gap-4 py-4">
           <Textarea
             placeholder={`Votre message à ${post.authorName}... Soyez poli et précis.`}
@@ -65,12 +65,12 @@ export function ContactModal({ post, isOpen, onClose }: ContactModalProps) {
             Vos coordonnées seront partagées uniquement après acceptation de {post.authorName}.
           </p>
         </div>
-        
+
         <DialogFooter>
           <Button variant="outline" onClick={onClose} data-testid="btn-cancel-contact">
             Annuler
           </Button>
-          <Button 
+          <Button
             className={isOffre ? "bg-primary hover:bg-primary/90" : "bg-accent hover:bg-accent/90 text-accent-foreground"}
             onClick={handleSend}
             disabled={!message.trim()}

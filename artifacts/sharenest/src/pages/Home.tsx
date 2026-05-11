@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import heroBg from "@assets/image_1778366786089.png";
 import { Link } from "wouter";
 import { Navbar } from "@/components/Navbar";
@@ -7,7 +7,8 @@ import { PostCard } from "@/components/PostCard";
 import { ContactModal } from "@/components/ContactModal";
 import { FilterBar } from "@/components/FilterBar";
 import { Button } from "@/components/ui/button";
-import { MOCK_POSTS, CATEGORIES, Post } from "@/data/posts";
+import { CATEGORIES, Post } from "@/data/posts";
+import { apiClient, type Post as ApiPost } from "@/lib/api";
 import { HeartHandshake, HelpingHand } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -15,23 +16,40 @@ export default function Home() {
   const [typeFilter, setTypeFilter] = useState("toutes");
   const [categoryFilter, setCategoryFilter] = useState("toutes");
   const [searchQuery, setSearchQuery] = useState("");
-  
-  const [selectedPost, setSelectedPost] = useState<Post | null>(null);
+  const [posts, setPosts] = useState<ApiPost[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const [selectedPost, setSelectedPost] = useState<ApiPost | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const handleContactClick = (post: Post) => {
+  useEffect(() => {
+    const fetchPosts = async () => {
+      try {
+        const fetchedPosts = await apiClient.getPosts();
+        setPosts(fetchedPosts);
+      } catch (error) {
+        console.error("Failed to fetch posts:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPosts();
+  }, []);
+
+  const handleContactClick = (post: ApiPost) => {
     setSelectedPost(post);
     setIsModalOpen(true);
   };
 
-  const filteredPosts = MOCK_POSTS.filter(post => {
+  const filteredPosts = posts.filter((post: ApiPost) => {
     if (typeFilter !== "toutes" && post.type !== typeFilter) return false;
     if (categoryFilter !== "toutes" && post.category !== categoryFilter) return false;
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      return post.title.toLowerCase().includes(query) || 
-             post.description.toLowerCase().includes(query) ||
-             post.city.toLowerCase().includes(query);
+      return post.title.toLowerCase().includes(query) ||
+        post.description.toLowerCase().includes(query) ||
+        post.city.toLowerCase().includes(query);
     }
     return true;
   });
@@ -39,15 +57,15 @@ export default function Home() {
   return (
     <div className="min-h-[100dvh] flex flex-col">
       <Navbar />
-      
+
       {/* Hero Section */}
       <section className="relative w-full h-[500px] flex items-center justify-center overflow-hidden">
         <div className="absolute inset-0 bg-black/40 z-10" />
-        <div 
-          className="absolute inset-0 bg-cover bg-center" 
+        <div
+          className="absolute inset-0 bg-cover bg-center"
           style={{ backgroundImage: `url(${heroBg})`, backgroundColor: "#e2e8f0" }}
         />
-        
+
         <div className="relative z-20 container mx-auto px-4 text-center">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
@@ -59,7 +77,7 @@ export default function Home() {
               Partagez. Donnez. Aidez.
             </h1>
             <p className="text-lg md:text-xl text-white/90 font-medium">
-              La plateforme de solidarité entre voisins en Algérie. 
+              La plateforme de solidarité entre voisins en Algérie.
               Offrez ce dont vous ne vous servez plus ou demandez un coup de main.
             </p>
             <div className="flex flex-col sm:flex-row justify-center gap-4 pt-4">
@@ -84,17 +102,17 @@ export default function Home() {
       <section className="bg-white border-b py-6 sticky top-16 z-40">
         <div className="container mx-auto px-4">
           <div className="flex overflow-x-auto pb-2 gap-2 hide-scrollbar items-center justify-start md:justify-center">
-            <Button 
-              variant={categoryFilter === "toutes" ? "default" : "outline"} 
+            <Button
+              variant={categoryFilter === "toutes" ? "default" : "outline"}
               className="rounded-full whitespace-nowrap"
               onClick={() => setCategoryFilter("toutes")}
             >
               Toutes
             </Button>
             {CATEGORIES.map(cat => (
-              <Button 
+              <Button
                 key={cat}
-                variant={categoryFilter === cat ? "default" : "outline"} 
+                variant={categoryFilter === cat ? "default" : "outline"}
                 className="rounded-full whitespace-nowrap"
                 onClick={() => setCategoryFilter(cat)}
               >
@@ -108,7 +126,7 @@ export default function Home() {
       {/* Main Feed */}
       <main className="flex-1 bg-gray-50 py-12">
         <div className="container mx-auto px-4">
-          <FilterBar 
+          <FilterBar
             typeFilter={typeFilter}
             setTypeFilter={setTypeFilter}
             categoryFilter={categoryFilter}
@@ -116,15 +134,15 @@ export default function Home() {
             searchQuery={searchQuery}
             setSearchQuery={setSearchQuery}
           />
-          
+
           {filteredPosts.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {filteredPosts.map((post, i) => (
-                <PostCard 
-                  key={post.id} 
-                  post={post} 
-                  index={i} 
-                  onContactClick={handleContactClick} 
+                <PostCard
+                  key={post.id}
+                  post={post}
+                  index={i}
+                  onContactClick={handleContactClick}
                 />
               ))}
             </div>
@@ -133,8 +151,8 @@ export default function Home() {
               <HeartHandshake className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-50" />
               <h3 className="text-lg font-medium text-foreground">Aucune annonce trouvée</h3>
               <p className="text-muted-foreground mt-2">Essayez de modifier vos filtres de recherche.</p>
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 className="mt-4"
                 onClick={() => {
                   setTypeFilter("toutes");
@@ -150,11 +168,11 @@ export default function Home() {
       </main>
 
       <Footer />
-      
-      <ContactModal 
-        post={selectedPost} 
-        isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)} 
+
+      <ContactModal
+        post={selectedPost}
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
       />
     </div>
   );
