@@ -1,10 +1,8 @@
-import { Router, type IRouter } from "express";
+import { Router } from "express";
 import healthRouter from "./health";
-import postsRouter from "./posts";
 
-const router: IRouter = Router();
+const router = Router();
 
-router.use(healthRouter);
-router.use("/posts", postsRouter);
+router.use("/healthz", healthRouter);
 
 export default router;
