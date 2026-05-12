@@ -10,6 +10,7 @@ import Login from "@/pages/Login";
 import Register from "@/pages/Register";
 import Publier from "@/pages/Publier";
 import Dashboard from "@/pages/Dashboard";
+import Messages from "@/pages/Messages";
 
 const queryClient = new QueryClient();
 
@@ -21,6 +22,7 @@ function Router() {
       <Route path="/register" component={Register} />
       <Route path="/publier" component={Publier} />
       <Route path="/tableau-de-bord" component={Dashboard} />
+      <Route path="/messages" component={Messages} />
       <Route component={NotFound} />
     </Switch>
   );
