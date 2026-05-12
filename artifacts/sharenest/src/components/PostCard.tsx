@@ -3,8 +3,9 @@ import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { MapPin, Clock, Tag } from "lucide-react";
+import { MapPin, Clock, Tag, ImageOff } from "lucide-react";
 import { motion } from "framer-motion";
+import { useState } from "react";
 
 interface PostCardProps {
   post: Post;
@@ -27,6 +28,7 @@ export function PostCard({ post, index, onContactClick, onDetailsClick }: PostCa
     day: "numeric",
     month: "short",
   });
+  const [imgError, setImgError] = useState(false);
 
   return (
     <motion.div
@@ -35,20 +37,50 @@ export function PostCard({ post, index, onContactClick, onDetailsClick }: PostCa
       transition={{ duration: 0.4, delay: Math.min(index * 0.08, 0.5) }}
     >
       <Card className="h-full flex flex-col overflow-hidden hover:shadow-md transition-shadow border-border/50">
-        <CardHeader className="p-4 pb-2">
-          <div className="flex justify-between items-start mb-2">
-            <Badge
-              variant="outline"
-              className={isOffre
-                ? "bg-primary/10 text-primary border-primary/20"
-                : "bg-accent/20 text-orange-700 border-accent/30"}
-            >
-              {isOffre ? "OFFRE" : "DEMANDE"}
-            </Badge>
-            {post.urgency && post.type === "demande" && (
-              <Badge variant="secondary" className="text-xs font-normal">{post.urgency}</Badge>
-            )}
+
+        {/* ── Post image ───────────────────────── */}
+        {post.imageUrl && !imgError ? (
+          <div className="relative w-full h-44 overflow-hidden bg-gray-100">
+            <img
+              src={post.imageUrl}
+              alt={post.title}
+              className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+              onError={() => setImgError(true)}
+            />
+            <div className="absolute top-2 left-2">
+              <Badge
+                variant="outline"
+                className={`backdrop-blur-sm bg-white/80 ${isOffre
+                  ? "text-primary border-primary/30"
+                  : "text-orange-700 border-accent/30"}`}
+              >
+                {isOffre ? "OFFRE" : "DEMANDE"}
+              </Badge>
+            </div>
           </div>
+        ) : null}
+
+        <CardHeader className="p-4 pb-2">
+          {(!post.imageUrl || imgError) && (
+            <div className="flex justify-between items-start mb-2">
+              <Badge
+                variant="outline"
+                className={isOffre
+                  ? "bg-primary/10 text-primary border-primary/20"
+                  : "bg-accent/20 text-orange-700 border-accent/30"}
+              >
+                {isOffre ? "OFFRE" : "DEMANDE"}
+              </Badge>
+              {post.urgency && post.type === "demande" && (
+                <Badge variant="secondary" className="text-xs font-normal">{post.urgency}</Badge>
+              )}
+            </div>
+          )}
+          {post.imageUrl && !imgError && post.urgency && post.type === "demande" && (
+            <div className="mb-2">
+              <Badge variant="secondary" className="text-xs font-normal">{post.urgency}</Badge>
+            </div>
+          )}
           <h3 className="font-semibold text-lg line-clamp-2 leading-tight">{post.title}</h3>
         </CardHeader>
 

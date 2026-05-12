@@ -1,5 +1,6 @@
 import express, { type Express } from "express";
 import cors from "cors";
+import path from "path";
 import pinoHttp from "pino-http";
 import router from "./routes";
 import { logger } from "./lib/logger";
@@ -34,6 +35,9 @@ app.use(cors({
   origin: env.CORS_ORIGIN,
   credentials: true,
 }));
+
+// Serve uploaded images as static files
+app.use("/api/uploads", express.static(path.join(process.cwd(), "uploads")));
 
 // Body parsing
 app.use(express.json());

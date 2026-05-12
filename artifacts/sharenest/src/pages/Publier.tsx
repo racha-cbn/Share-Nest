@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { Card, CardContent } from "@/components/ui/card";
@@ -26,7 +26,7 @@ import {
 import { useLocation } from "wouter";
 import { apiClient } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { Loader2 } from "lucide-react";
+import { ImagePlus, X, Loader2 } from "lucide-react";
 
 const formSchema = z.object({
   type: z.enum(["offre", "demande"]),
@@ -47,6 +47,9 @@ export default function Publier() {
   const [, setLocation] = useLocation();
   const { user } = useAuth();
   const [submitting, setSubmitting] = useState(false);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -67,6 +70,25 @@ export default function Publier() {
 
   const type = form.watch("type");
 
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: "Fichier trop grand", description: "La photo ne doit pas dépasser 5 Mo.", variant: "destructive" });
+      return;
+    }
+    setImageFile(file);
+    const reader = new FileReader();
+    reader.onload = (ev) => setImagePreview(ev.target?.result as string);
+    reader.readAsDataURL(file);
+  };
+
+  const removeImage = () => {
+    setImageFile(null);
+    setImagePreview(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setSubmitting(true);
     try {
@@ -80,6 +102,7 @@ export default function Publier() {
         authorName: values.anonymous ? "Anonyme" : values.authorName,
         authorEmail: values.authorEmail,
         authorPhone: values.authorPhone || undefined,
+        image: imageFile || undefined,
       });
       toast({
         title: "Annonce publiée !",
@@ -239,6 +262,45 @@ export default function Publier() {
                     </FormItem>
                   )}
                 />
+
+                {/* ── Image Upload ──────────────────────────────── */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Photo (optionnelle)</Label>
+                  {imagePreview ? (
+                    <div className="relative w-full max-w-sm">
+                      <img
+                        src={imagePreview}
+                        alt="Aperçu"
+                        className="w-full h-52 object-cover rounded-lg border border-border/50"
+                      />
+                      <button
+                        type="button"
+                        onClick={removeImage}
+                        className="absolute top-2 right-2 bg-black/60 hover:bg-black/80 text-white rounded-full w-7 h-7 flex items-center justify-center transition-colors"
+                        aria-label="Supprimer la photo"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="w-full max-w-sm h-36 border-2 border-dashed border-border/60 rounded-lg flex flex-col items-center justify-center gap-2 text-muted-foreground hover:border-primary/50 hover:bg-primary/5 hover:text-primary transition-all cursor-pointer"
+                    >
+                      <ImagePlus className="w-8 h-8" />
+                      <span className="text-sm font-medium">Ajouter une photo</span>
+                      <span className="text-xs">JPG, PNG, WebP — max 5 Mo</span>
+                    </button>
+                  )}
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif"
+                    onChange={handleImageChange}
+                    className="hidden"
+                  />
+                </div>
 
                 {type === "demande" && (
                   <FormField

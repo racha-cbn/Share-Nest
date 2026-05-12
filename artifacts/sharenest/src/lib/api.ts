@@ -24,6 +24,7 @@ export interface Post {
   authorName: string;
   authorEmail: string;
   authorPhone: string | null;
+  imageUrl: string | null;
   status: "disponible" | "réservé" | "terminé";
   createdAt: string;
   updatedAt: string;
@@ -51,6 +52,7 @@ export interface CreatePostRequest {
   authorName: string;
   authorEmail: string;
   authorPhone?: string;
+  image?: File;
 }
 
 export interface UpdatePostRequest {
@@ -94,6 +96,25 @@ class ApiClient {
     return response.json();
   }
 
+  private async requestFormData<T>(endpoint: string, formData: FormData): Promise<T> {
+    const url = `${this.baseUrl}${endpoint}`;
+    const token = this.getToken();
+    const headers: Record<string, string> = {};
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+    const response = await fetch(url, {
+      method: "POST",
+      headers,
+      body: formData,
+    });
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `Erreur HTTP ${response.status}`);
+    }
+    return response.json();
+  }
+
   async register(data: { name: string; email: string; password: string; city: string; role?: string }): Promise<AuthResponse> {
     return this.request<AuthResponse>("/auth/register", { method: "POST", body: JSON.stringify(data) });
   }
@@ -116,7 +137,18 @@ class ApiClient {
   }
 
   async createPost(postData: CreatePostRequest): Promise<Post> {
-    return this.request<Post>("/posts", { method: "POST", body: JSON.stringify(postData) });
+    const formData = new FormData();
+    formData.append("type", postData.type);
+    formData.append("title", postData.title);
+    formData.append("description", postData.description);
+    formData.append("category", postData.category);
+    formData.append("city", postData.city);
+    if (postData.urgency) formData.append("urgency", postData.urgency);
+    formData.append("authorName", postData.authorName);
+    formData.append("authorEmail", postData.authorEmail);
+    if (postData.authorPhone) formData.append("authorPhone", postData.authorPhone);
+    if (postData.image) formData.append("image", postData.image);
+    return this.requestFormData<Post>("/posts", formData);
   }
 
   async updatePost(id: number, updateData: UpdatePostRequest): Promise<Post> {

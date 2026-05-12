@@ -1,5 +1,4 @@
 import { pgTable, text, serial, timestamp } from "drizzle-orm/pg-core";
-import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
 export const postsTable = pgTable("posts", {
@@ -13,12 +12,12 @@ export const postsTable = pgTable("posts", {
   authorName: text("author_name").notNull(),
   authorEmail: text("author_email").notNull(),
   authorPhone: text("author_phone"),
+  imageUrl: text("image_url"),
   status: text("status").notNull().default("disponible"), // "disponible" | "réservé" | "terminé"
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
-// Define manual schemas to avoid Zod type issues
 export const insertPostSchema = z.object({
   type: z.enum(["offre", "demande"]),
   title: z.string().min(1),

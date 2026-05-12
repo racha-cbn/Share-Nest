@@ -1,7 +1,30 @@
 import { Router, type IRouter } from "express";
+import multer from "multer";
+import path from "path";
+import fs from "fs";
 import { db } from "@workspace/db";
 import { postsTable, insertPostSchema, updatePostSchema } from "@workspace/db/schema";
 import { eq, desc } from "drizzle-orm";
+
+const uploadsDir = path.join(process.cwd(), "uploads");
+if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+
+const storage = multer.diskStorage({
+  destination: (_req, _file, cb) => cb(null, uploadsDir),
+  filename: (_req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    cb(null, `${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`);
+  },
+});
+
+const upload = multer({
+  storage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB max
+  fileFilter: (_req, file, cb) => {
+    const allowed = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+    cb(null, allowed.includes(file.mimetype));
+  },
+});
 
 const router: IRouter = Router();
 
@@ -36,12 +59,20 @@ router.get("/:id", async (req, res, next) => {
   }
 });
 
-router.post("/", async (req, res, next) => {
+router.post("/", upload.single("image"), async (req, res, next) => {
   try {
     const data = insertPostSchema.parse(req.body);
-    const [post] = await db.insert(postsTable).values(data).returning();
+    let imageUrl: string | null = null;
+    if (req.file) {
+      imageUrl = `/api/uploads/${req.file.filename}`;
+    }
+    const [post] = await db.insert(postsTable).values({ ...data, imageUrl }).returning();
     res.status(201).json(post);
   } catch (err) {
+    // Clean up uploaded file if validation failed
+    if (req.file) {
+      fs.unlink(req.file.path, () => {});
+    }
     next(err);
   }
 });
