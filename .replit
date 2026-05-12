@@ -55,3 +55,10 @@ externalPort = 80
 [[ports]]
 localPort = 20059
 externalPort = 3000
+
+[userenv]
+
+[userenv.shared]
+JWT_SECRET = "191a2b3eb0852deef14bd46b2006b1122f516a62c472a175931e4e4139960ae5b5818c9d6db02086d359bf2fbaceaf49"
+JWT_REFRESH_SECRET = "dfc10598c30dc86b17f00d6e729b9289dc02fb8b93af6ae33a25c2c6fe457c140f0667664cff06296fce1c38ec6a49a8"
+CORS_ORIGIN = "https://258546a0-7959-4667-95d3-7f09ff3d8536-00-6o4isqiebfzb.picard.replit.dev"
