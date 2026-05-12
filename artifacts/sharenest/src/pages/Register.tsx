@@ -1,4 +1,5 @@
-import { Link } from "wouter";
+import { useState } from "react";
+import { Link, useLocation } from "wouter";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,9 +9,10 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { CITIES } from "@/data/posts";
-import { HeartHandshake } from "lucide-react";
+import { HeartHandshake, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useState } from "react";
+import { apiClient } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
 
 export default function Register() {
   const [name, setName] = useState("");
@@ -18,28 +20,41 @@ export default function Register() {
   const [password, setPassword] = useState("");
   const [city, setCity] = useState("");
   const [role, setRole] = useState("donor");
+  const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  const { login } = useAuth();
+  const [, setLocation] = useLocation();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!city) {
-      toast({
-        title: "Erreur",
-        description: "Veuillez sélectionner une ville.",
-        variant: "destructive"
-      });
+      toast({ title: "Erreur", description: "Veuillez sélectionner une ville.", variant: "destructive" });
       return;
     }
-    toast({
-      title: "Inscription réussie",
-      description: "Bienvenue dans la communauté Sharenest !",
-    });
+    setLoading(true);
+    try {
+      const { token, user } = await apiClient.register({ name, email, password, city, role });
+      login(token, user);
+      toast({
+        title: "Inscription réussie !",
+        description: `Bienvenue dans la communauté Sharenest, ${user.name} !`,
+      });
+      setLocation("/");
+    } catch (error: any) {
+      toast({
+        title: "Erreur d'inscription",
+        description: error.message || "Une erreur est survenue.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="min-h-[100dvh] flex flex-col bg-gray-50">
       <Navbar />
-      
+
       <main className="flex-1 flex items-center justify-center p-4 py-12">
         <Card className="w-full max-w-xl shadow-lg border-border/50">
           <CardHeader className="text-center space-y-2 pb-6">
@@ -47,19 +62,17 @@ export default function Register() {
               <HeartHandshake className="h-6 w-6 text-accent" />
             </div>
             <CardTitle className="text-2xl font-bold">Rejoindre la communauté</CardTitle>
-            <CardDescription>
-              Créez votre compte pour commencer à partager dans votre ville.
-            </CardDescription>
+            <CardDescription>Créez votre compte pour commencer à partager dans votre ville.</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-5">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="name">Nom complet</Label>
-                  <Input 
-                    id="name" 
-                    placeholder="Amine K." 
-                    required 
+                  <Input
+                    id="name"
+                    placeholder="Amine K."
+                    required
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     data-testid="input-register-name"
@@ -67,38 +80,39 @@ export default function Register() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="city">Ville</Label>
-                  <Select value={city} onValueChange={setCity} required>
+                  <Select value={city} onValueChange={setCity}>
                     <SelectTrigger id="city" data-testid="select-register-city">
                       <SelectValue placeholder="Sélectionnez une ville" />
                     </SelectTrigger>
                     <SelectContent>
-                      {CITIES.map(c => (
+                      {CITIES.map((c) => (
                         <SelectItem key={c} value={c}>{c}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="email">Adresse email</Label>
-                <Input 
-                  id="email" 
-                  type="email" 
-                  placeholder="nom@exemple.com" 
-                  required 
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="nom@exemple.com"
+                  required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   data-testid="input-register-email"
                 />
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="password">Mot de passe</Label>
-                <Input 
-                  id="password" 
-                  type="password" 
-                  required 
+                <Input
+                  id="password"
+                  type="password"
+                  required
+                  minLength={6}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   data-testid="input-register-password"
@@ -119,8 +133,20 @@ export default function Register() {
                 </RadioGroup>
               </div>
 
-              <Button type="submit" className="w-full bg-primary hover:bg-primary/90 mt-4" data-testid="btn-submit-register">
-                Créer mon compte
+              <Button
+                type="submit"
+                className="w-full bg-primary hover:bg-primary/90 mt-4"
+                disabled={loading}
+                data-testid="btn-submit-register"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Création du compte...
+                  </>
+                ) : (
+                  "Créer mon compte"
+                )}
               </Button>
             </form>
           </CardContent>

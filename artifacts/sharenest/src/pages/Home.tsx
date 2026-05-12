@@ -5,51 +5,52 @@ import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { PostCard } from "@/components/PostCard";
 import { ContactModal } from "@/components/ContactModal";
+import { PostDetailModal } from "@/components/PostDetailModal";
 import { FilterBar } from "@/components/FilterBar";
 import { Button } from "@/components/ui/button";
-import { CATEGORIES, Post } from "@/data/posts";
-import { apiClient, type Post as ApiPost } from "@/lib/api";
-import { HeartHandshake, HelpingHand } from "lucide-react";
+import { CATEGORIES } from "@/data/posts";
+import { apiClient, type Post } from "@/lib/api";
+import { HeartHandshake, HelpingHand, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
 
 export default function Home() {
   const [typeFilter, setTypeFilter] = useState("toutes");
   const [categoryFilter, setCategoryFilter] = useState("toutes");
   const [searchQuery, setSearchQuery] = useState("");
-  const [posts, setPosts] = useState<ApiPost[]>([]);
+  const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const [selectedPost, setSelectedPost] = useState<ApiPost | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedPost, setSelectedPost] = useState<Post | null>(null);
+  const [isContactOpen, setIsContactOpen] = useState(false);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
 
   useEffect(() => {
-    const fetchPosts = async () => {
-      try {
-        const fetchedPosts = await apiClient.getPosts();
-        setPosts(fetchedPosts);
-      } catch (error) {
-        console.error("Failed to fetch posts:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchPosts();
+    apiClient.getPosts()
+      .then(setPosts)
+      .catch((err) => console.error("Failed to fetch posts:", err))
+      .finally(() => setLoading(false));
   }, []);
 
-  const handleContactClick = (post: ApiPost) => {
+  const handleContactClick = (post: Post) => {
     setSelectedPost(post);
-    setIsModalOpen(true);
+    setIsContactOpen(true);
   };
 
-  const filteredPosts = posts.filter((post: ApiPost) => {
+  const handleDetailsClick = (post: Post) => {
+    setSelectedPost(post);
+    setIsDetailOpen(true);
+  };
+
+  const filteredPosts = posts.filter((post) => {
     if (typeFilter !== "toutes" && post.type !== typeFilter) return false;
     if (categoryFilter !== "toutes" && post.category !== categoryFilter) return false;
     if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      return post.title.toLowerCase().includes(query) ||
-        post.description.toLowerCase().includes(query) ||
-        post.city.toLowerCase().includes(query);
+      const q = searchQuery.toLowerCase();
+      return (
+        post.title.toLowerCase().includes(q) ||
+        post.description.toLowerCase().includes(q) ||
+        post.city.toLowerCase().includes(q)
+      );
     }
     return true;
   });
@@ -58,14 +59,12 @@ export default function Home() {
     <div className="min-h-[100dvh] flex flex-col">
       <Navbar />
 
-      {/* Hero Section */}
       <section className="relative w-full h-[500px] flex items-center justify-center overflow-hidden">
         <div className="absolute inset-0 bg-black/40 z-10" />
         <div
           className="absolute inset-0 bg-cover bg-center"
           style={{ backgroundImage: `url(${heroBg})`, backgroundColor: "#e2e8f0" }}
         />
-
         <div className="relative z-20 container mx-auto px-4 text-center">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
@@ -98,7 +97,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Categories Row */}
       <section className="bg-white border-b py-6 sticky top-16 z-40">
         <div className="container mx-auto px-4">
           <div className="flex overflow-x-auto pb-2 gap-2 hide-scrollbar items-center justify-start md:justify-center">
@@ -109,7 +107,7 @@ export default function Home() {
             >
               Toutes
             </Button>
-            {CATEGORIES.map(cat => (
+            {CATEGORIES.map((cat) => (
               <Button
                 key={cat}
                 variant={categoryFilter === cat ? "default" : "outline"}
@@ -123,7 +121,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Main Feed */}
       <main className="flex-1 bg-gray-50 py-12">
         <div className="container mx-auto px-4">
           <FilterBar
@@ -135,7 +132,11 @@ export default function Home() {
             setSearchQuery={setSearchQuery}
           />
 
-          {filteredPosts.length > 0 ? (
+          {loading ? (
+            <div className="flex justify-center py-20">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : filteredPosts.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {filteredPosts.map((post, i) => (
                 <PostCard
@@ -143,6 +144,7 @@ export default function Home() {
                   post={post}
                   index={i}
                   onContactClick={handleContactClick}
+                  onDetailsClick={handleDetailsClick}
                 />
               ))}
             </div>
@@ -154,11 +156,7 @@ export default function Home() {
               <Button
                 variant="outline"
                 className="mt-4"
-                onClick={() => {
-                  setTypeFilter("toutes");
-                  setCategoryFilter("toutes");
-                  setSearchQuery("");
-                }}
+                onClick={() => { setTypeFilter("toutes"); setCategoryFilter("toutes"); setSearchQuery(""); }}
               >
                 Réinitialiser les filtres
               </Button>
@@ -171,8 +169,18 @@ export default function Home() {
 
       <ContactModal
         post={selectedPost}
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        isOpen={isContactOpen}
+        onClose={() => setIsContactOpen(false)}
+      />
+      <PostDetailModal
+        post={selectedPost}
+        isOpen={isDetailOpen}
+        onClose={() => setIsDetailOpen(false)}
+        onContact={(post) => {
+          setIsDetailOpen(false);
+          setSelectedPost(post);
+          setIsContactOpen(true);
+        }}
       />
     </div>
   );

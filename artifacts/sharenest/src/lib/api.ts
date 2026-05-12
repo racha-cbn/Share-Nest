@@ -1,5 +1,18 @@
 const API_BASE_URL = `${window.location.origin}/api`;
 
+export interface User {
+  id: number;
+  name: string;
+  email: string;
+  city: string;
+  role: string;
+}
+
+export interface AuthResponse {
+  token: string;
+  user: User;
+}
+
 export interface Post {
   id: number;
   type: "offre" | "demande";
@@ -32,6 +45,14 @@ export interface UpdatePostRequest {
   status: "disponible" | "réservé" | "terminé";
 }
 
+export interface SendMessageRequest {
+  postId: string;
+  receiverId: string;
+  content: string;
+  senderName?: string;
+  senderEmail?: string;
+}
+
 class ApiClient {
   private baseUrl: string;
 
@@ -39,35 +60,43 @@ class ApiClient {
     this.baseUrl = baseUrl;
   }
 
-  private async request<T>(
-    endpoint: string,
-    options: RequestInit = {}
-  ): Promise<T> {
+  private getToken(): string | null {
+    return localStorage.getItem("sharenest_token");
+  }
+
+  private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`;
-    
-    const config: RequestInit = {
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers,
-      },
-      ...options,
+    const token = this.getToken();
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+      ...(options.headers as Record<string, string>),
     };
-
-    const response = await fetch(url, config);
-
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+    const response = await fetch(url, { ...options, headers });
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(
-        errorData.error || `HTTP error! status: ${response.status}`
-      );
+      throw new Error(errorData.error || `Erreur HTTP ${response.status}`);
     }
-
     return response.json();
   }
 
-  // Posts endpoints
-  async getPosts(): Promise<Post[]> {
-    return this.request<Post[]>('/posts');
+  async register(data: { name: string; email: string; password: string; city: string; role?: string }): Promise<AuthResponse> {
+    return this.request<AuthResponse>("/auth/register", { method: "POST", body: JSON.stringify(data) });
+  }
+
+  async login(email: string, password: string): Promise<AuthResponse> {
+    return this.request<AuthResponse>("/auth/login", { method: "POST", body: JSON.stringify({ email, password }) });
+  }
+
+  async getMe(): Promise<User> {
+    return this.request<User>("/auth/me");
+  }
+
+  async getPosts(authorEmail?: string): Promise<Post[]> {
+    const qs = authorEmail ? `?authorEmail=${encodeURIComponent(authorEmail)}` : "";
+    return this.request<Post[]>(`/posts${qs}`);
   }
 
   async getPost(id: number): Promise<Post> {
@@ -75,23 +104,23 @@ class ApiClient {
   }
 
   async createPost(postData: CreatePostRequest): Promise<Post> {
-    return this.request<Post>('/posts', {
-      method: 'POST',
-      body: JSON.stringify(postData),
-    });
+    return this.request<Post>("/posts", { method: "POST", body: JSON.stringify(postData) });
   }
 
   async updatePost(id: number, updateData: UpdatePostRequest): Promise<Post> {
-    return this.request<Post>(`/posts/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(updateData),
-    });
+    return this.request<Post>(`/posts/${id}`, { method: "PUT", body: JSON.stringify(updateData) });
   }
 
   async deletePost(id: number): Promise<{ message: string }> {
-    return this.request<{ message: string }>(`/posts/${id}`, {
-      method: 'DELETE',
-    });
+    return this.request<{ message: string }>(`/posts/${id}`, { method: "DELETE" });
+  }
+
+  async sendMessage(data: SendMessageRequest): Promise<any> {
+    return this.request("/messages", { method: "POST", body: JSON.stringify(data) });
+  }
+
+  async getMessages(): Promise<any[]> {
+    return this.request("/messages");
   }
 }
 

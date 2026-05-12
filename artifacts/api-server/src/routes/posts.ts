@@ -5,12 +5,17 @@ import { eq, desc } from "drizzle-orm";
 
 const router: IRouter = Router();
 
-router.get("/", async (_req, res, next) => {
+router.get("/", async (req, res, next) => {
   try {
-    const posts = await db
-      .select()
-      .from(postsTable)
-      .orderBy(desc(postsTable.createdAt));
+    const { authorEmail } = req.query as { authorEmail?: string };
+    let posts;
+    if (authorEmail) {
+      posts = await db.select().from(postsTable)
+        .where(eq(postsTable.authorEmail, authorEmail))
+        .orderBy(desc(postsTable.createdAt));
+    } else {
+      posts = await db.select().from(postsTable).orderBy(desc(postsTable.createdAt));
+    }
     res.json(posts);
   } catch (err) {
     next(err);
@@ -20,12 +25,9 @@ router.get("/", async (_req, res, next) => {
 router.get("/:id", async (req, res, next) => {
   try {
     const id = parseInt(req.params.id, 10);
-    const [post] = await db
-      .select()
-      .from(postsTable)
-      .where(eq(postsTable.id, id));
+    const [post] = await db.select().from(postsTable).where(eq(postsTable.id, id));
     if (!post) {
-      res.status(404).json({ error: "Post not found" });
+      res.status(404).json({ error: "Annonce introuvable" });
       return;
     }
     res.json(post);
@@ -48,13 +50,12 @@ router.put("/:id", async (req, res, next) => {
   try {
     const id = parseInt(req.params.id, 10);
     const data = updatePostSchema.parse(req.body);
-    const [post] = await db
-      .update(postsTable)
+    const [post] = await db.update(postsTable)
       .set({ ...data, updatedAt: new Date() })
       .where(eq(postsTable.id, id))
       .returning();
     if (!post) {
-      res.status(404).json({ error: "Post not found" });
+      res.status(404).json({ error: "Annonce introuvable" });
       return;
     }
     res.json(post);
@@ -67,7 +68,7 @@ router.delete("/:id", async (req, res, next) => {
   try {
     const id = parseInt(req.params.id, 10);
     await db.delete(postsTable).where(eq(postsTable.id, id));
-    res.json({ message: "Post deleted" });
+    res.json({ message: "Annonce supprimée" });
   } catch (err) {
     next(err);
   }

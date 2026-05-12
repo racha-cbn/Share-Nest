@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -24,25 +24,29 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { useLocation } from "wouter";
+import { apiClient } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
+import { Loader2 } from "lucide-react";
 
 const formSchema = z.object({
   type: z.enum(["offre", "demande"]),
-  title: z.string().min(5, {
-    message: "Le titre doit contenir au moins 5 caractères.",
-  }),
-  description: z.string().min(10, {
-    message: "La description doit contenir au moins 10 caractères.",
-  }),
+  title: z.string().min(5, { message: "Le titre doit contenir au moins 5 caractères." }),
+  description: z.string().min(10, { message: "La description doit contenir au moins 10 caractères." }),
   category: z.string().min(1, { message: "Veuillez sélectionner une catégorie." }),
   city: z.string().min(1, { message: "Veuillez sélectionner une ville." }),
   urgency: z.string().optional(),
   delivery: z.boolean().default(false),
   anonymous: z.boolean().default(false),
+  authorName: z.string().min(2, { message: "Votre nom est requis." }),
+  authorEmail: z.string().email({ message: "Email valide requis." }),
+  authorPhone: z.string().optional(),
 });
 
 export default function Publier() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
+  const { user } = useAuth();
+  const [submitting, setSubmitting] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -51,27 +55,52 @@ export default function Publier() {
       title: "",
       description: "",
       category: "",
-      city: "",
+      city: user?.city || "",
       urgency: "Faible",
       delivery: false,
       anonymous: false,
+      authorName: user?.name || "",
+      authorEmail: user?.email || "",
+      authorPhone: "",
     },
   });
 
   const type = form.watch("type");
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
-    toast({
-      title: "Annonce publiée !",
-      description: "Votre annonce est maintenant visible par la communauté.",
-    });
-    setTimeout(() => setLocation("/"), 1500);
+  async function onSubmit(values: z.infer<typeof formSchema>) {
+    setSubmitting(true);
+    try {
+      await apiClient.createPost({
+        type: values.type,
+        title: values.title,
+        description: values.description,
+        category: values.category,
+        city: values.city,
+        urgency: values.urgency as "Faible" | "Moyen" | "Urgent" | undefined,
+        authorName: values.anonymous ? "Anonyme" : values.authorName,
+        authorEmail: values.authorEmail,
+        authorPhone: values.authorPhone || undefined,
+      });
+      toast({
+        title: "Annonce publiée !",
+        description: "Votre annonce est maintenant visible par la communauté.",
+      });
+      setTimeout(() => setLocation("/"), 1200);
+    } catch (error: any) {
+      toast({
+        title: "Erreur",
+        description: error.message || "Impossible de publier l'annonce.",
+        variant: "destructive",
+      });
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
     <div className="min-h-[100dvh] flex flex-col bg-gray-50">
       <Navbar />
-      
+
       <main className="flex-1 container mx-auto px-4 py-8 md:py-12 max-w-3xl">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-foreground">Publier une annonce</h1>
@@ -82,8 +111,7 @@ export default function Publier() {
           <CardContent className="p-6 md:p-8">
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-                
-                {/* Type Selection */}
+
                 <FormField
                   control={form.control}
                   name="type"
@@ -145,7 +173,7 @@ export default function Publier() {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {CATEGORIES.map(cat => (
+                            {CATEGORIES.map((cat) => (
                               <SelectItem key={cat} value={cat}>{cat}</SelectItem>
                             ))}
                           </SelectContent>
@@ -168,7 +196,7 @@ export default function Publier() {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {CITIES.map(city => (
+                            {CITIES.map((city) => (
                               <SelectItem key={city} value={city}>{city}</SelectItem>
                             ))}
                           </SelectContent>
@@ -200,10 +228,10 @@ export default function Publier() {
                     <FormItem>
                       <FormLabel>Description détaillée</FormLabel>
                       <FormControl>
-                        <Textarea 
-                          placeholder="Décrivez l'objet ou le service en détail (état, dimensions, disponibilités...)" 
+                        <Textarea
+                          placeholder="Décrivez l'objet ou le service en détail (état, dimensions, disponibilités...)"
                           className="min-h-[120px]"
-                          {...field} 
+                          {...field}
                           data-testid="input-pub-description"
                         />
                       </FormControl>
@@ -237,9 +265,56 @@ export default function Publier() {
                   />
                 )}
 
+                {!user && (
+                  <div className="space-y-4 pt-4 border-t">
+                    <h3 className="font-medium">Vos coordonnées</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="authorName"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Votre nom</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Amine K." {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="authorEmail"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Votre email</FormLabel>
+                            <FormControl>
+                              <Input type="email" placeholder="nom@exemple.com" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    <FormField
+                      control={form.control}
+                      name="authorPhone"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Téléphone (optionnel)</FormLabel>
+                          <FormControl>
+                            <Input placeholder="0550 123 456" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                )}
+
                 <div className="space-y-4 pt-4 border-t">
                   <h3 className="font-medium">Options supplémentaires</h3>
-                  
+
                   {type === "offre" && (
                     <FormField
                       control={form.control}
@@ -247,19 +322,11 @@ export default function Publier() {
                       render={({ field }) => (
                         <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 shadow-sm bg-white">
                           <FormControl>
-                            <Checkbox
-                              checked={field.value}
-                              onCheckedChange={field.onChange}
-                              data-testid="checkbox-delivery"
-                            />
+                            <Checkbox checked={field.value} onCheckedChange={field.onChange} data-testid="checkbox-delivery" />
                           </FormControl>
                           <div className="space-y-1 leading-none">
-                            <FormLabel className="cursor-pointer">
-                              Livraison ou déplacement possible
-                            </FormLabel>
-                            <FormDescription>
-                              Je peux me déplacer pour apporter l'objet ou rendre le service.
-                            </FormDescription>
+                            <FormLabel className="cursor-pointer">Livraison ou déplacement possible</FormLabel>
+                            <FormDescription>Je peux me déplacer pour apporter l'objet ou rendre le service.</FormDescription>
                           </div>
                         </FormItem>
                       )}
@@ -272,32 +339,32 @@ export default function Publier() {
                     render={({ field }) => (
                       <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 shadow-sm bg-white">
                         <FormControl>
-                          <Checkbox
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                            data-testid="checkbox-anonymous"
-                          />
+                          <Checkbox checked={field.value} onCheckedChange={field.onChange} data-testid="checkbox-anonymous" />
                         </FormControl>
                         <div className="space-y-1 leading-none">
-                          <FormLabel className="cursor-pointer">
-                            Publier anonymement
-                          </FormLabel>
-                          <FormDescription>
-                            Votre nom ne sera pas affiché publiquement (uniquement aux personnes que vous acceptez).
-                          </FormDescription>
+                          <FormLabel className="cursor-pointer">Publier anonymement</FormLabel>
+                          <FormDescription>Votre nom ne sera pas affiché publiquement.</FormDescription>
                         </div>
                       </FormItem>
                     )}
                   />
                 </div>
 
-                <Button 
-                  type="submit" 
-                  size="lg" 
+                <Button
+                  type="submit"
+                  size="lg"
                   className={`w-full text-lg ${type === "offre" ? "bg-primary hover:bg-primary/90" : "bg-accent hover:bg-accent/90 text-accent-foreground"}`}
+                  disabled={submitting}
                   data-testid="btn-submit-publish"
                 >
-                  Publier l'annonce
+                  {submitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                      Publication en cours...
+                    </>
+                  ) : (
+                    "Publier l'annonce"
+                  )}
                 </Button>
               </form>
             </Form>
