@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { messagesTable } from "@workspace/db/schema";
-import { eq, or } from "drizzle-orm";
+import { eq, or, desc } from "drizzle-orm";
 import jwt from "jsonwebtoken";
 import { env } from "../config/env";
 import { z } from "zod";
@@ -31,8 +31,13 @@ router.post("/", async (req, res, next) => {
     const data = sendSchema.parse(req.body);
     const user = parseUser(req);
     const senderId = user ? String(user.userId) : (data.senderEmail || "anonymous");
+    const senderName = data.senderName || (user ? user.email : "Anonyme");
+    const senderEmail = data.senderEmail || (user ? user.email : "");
+
     const [msg] = await db.insert(messagesTable).values({
       senderId,
+      senderName,
+      senderEmail,
       receiverId: data.receiverId,
       postId: data.postId,
       content: data.content,
@@ -52,8 +57,22 @@ router.get("/", async (req, res, next) => {
     }
     const userId = String(user.userId);
     const messages = await db.select().from(messagesTable)
-      .where(or(eq(messagesTable.senderId, userId), eq(messagesTable.receiverId, userId)));
+      .where(or(eq(messagesTable.senderId, userId), eq(messagesTable.receiverId, user.email)))
+      .orderBy(desc(messagesTable.createdAt));
     res.json(messages);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.patch("/:id/read", async (req, res, next) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    const [msg] = await db.update(messagesTable)
+      .set({ isRead: "true" })
+      .where(eq(messagesTable.id, id))
+      .returning();
+    res.json(msg);
   } catch (err) {
     next(err);
   }

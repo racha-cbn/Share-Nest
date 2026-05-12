@@ -29,6 +29,18 @@ export interface Post {
   updatedAt: string;
 }
 
+export interface Message {
+  id: number;
+  senderId: string;
+  senderName: string;
+  senderEmail: string;
+  receiverId: string;
+  postId: string;
+  content: string;
+  isRead: string;
+  createdAt: string;
+}
+
 export interface CreatePostRequest {
   type: "offre" | "demande";
   title: string;
@@ -115,12 +127,16 @@ class ApiClient {
     return this.request<{ message: string }>(`/posts/${id}`, { method: "DELETE" });
   }
 
-  async sendMessage(data: SendMessageRequest): Promise<any> {
-    return this.request("/messages", { method: "POST", body: JSON.stringify(data) });
+  async sendMessage(data: SendMessageRequest): Promise<Message> {
+    return this.request<Message>("/messages", { method: "POST", body: JSON.stringify(data) });
   }
 
-  async getMessages(): Promise<any[]> {
-    return this.request("/messages");
+  async getMessages(): Promise<Message[]> {
+    return this.request<Message[]>("/messages");
+  }
+
+  async markMessageRead(id: number): Promise<Message> {
+    return this.request<Message>(`/messages/${id}/read`, { method: "PATCH" });
   }
 }
 
